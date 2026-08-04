@@ -1,0 +1,35 @@
+# Runs on remediation PRs against this demo app.
+# Interview talking point: agent opens the PR; THIS workflow is the system of
+# record that tests the fix before a human merges.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install
+        run: npm install
+      - name: Unit tests
+        run: npm test
+
+  # Stub: in a real org this job uploads SARIF and/or fails on unresolved issues.
+  # OpenFix agents must not self-attest — this re-scan is the detective control.
+  scanner-stub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scanner re-run placeholder
+        run: |
+          echo "Replace with Semgrep/OSV/CodeQL on the fix PR."
+          echo "Finding is only 'cleared' when this job's SARIF says so."
+          echo "See OpenFix: npx tsx src/cli.ts verify --pr <url>"
