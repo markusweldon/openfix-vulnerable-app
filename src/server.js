@@ -1,6 +1,10 @@
 var express = require("express");
 var files = require("./files");
 var tokens = require("./auth/tokens");
+var { pingHost } = require("./exec");
+var { nextUrl } = require("./redirect");
+var { calculate } = require("./calc");
+var { fetchUrl } = require("./fetch");
 
 var app = express();
 
@@ -21,6 +25,38 @@ app.get("/file", function (req, res) {
   } catch (err) {
     res.status(400).send(String(err.message || err));
   }
+});
+
+app.get("/ping", function (req, res) {
+  pingHost(req.query.host || "127.0.0.1")
+    .then(function (out) {
+      res.type("text/plain").send(out);
+    })
+    .catch(function (err) {
+      res.status(400).send(String(err.message || err));
+    });
+});
+
+app.get("/go", function (req, res) {
+  res.redirect(nextUrl(req.query.next));
+});
+
+app.get("/calc", function (req, res) {
+  try {
+    res.json({ result: calculate(req.query.expr || "1+1") });
+  } catch (err) {
+    res.status(400).send(String(err.message || err));
+  }
+});
+
+app.get("/proxy", function (req, res) {
+  fetchUrl(req.query.url || "http://127.0.0.1:3000/")
+    .then(function (body) {
+      res.type("text/plain").send(body);
+    })
+    .catch(function (err) {
+      res.status(400).send(String(err.message || err));
+    });
 });
 
 app.get("/token-hint", function (req, res) {
