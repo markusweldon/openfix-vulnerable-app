@@ -1,8 +1,12 @@
-# Runs on remediation PRs against this demo app.
-# Interview talking point: agent opens the PR; THIS workflow is the system of
-# record that tests the fix before a human merges.
+# App CI on remediation PRs — HOW we prove the agent fix before merge
+#
+# PURPOSE (say this in the interview):
+#   OpenFix / Cursor opens the fix PR. This workflow is the system of record
+#   that tests it. Agents do not self-attest — green checks + scanner re-run do.
+#
+# You see value HERE: open a remediation PR → Checks tab → these jobs.
 
-name: CI
+name: "App CI (verify fix PR)"
 
 on:
   pull_request:
@@ -10,26 +14,39 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  unit-tests:
+    name: Unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Install
-        run: npm install
-      - name: Unit tests
-        run: npm test
+      - name: Why this check exists
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          # Verify agent remediations before merge
 
-  # Stub: in a real org this job uploads SARIF and/or fails on unresolved issues.
-  # OpenFix agents must not self-attest — this re-scan is the detective control.
-  scanner-stub:
+          OpenFix agents propose fixes. **This job proves the code still works.**
+
+          Flow: scanner finding → Cursor fix PR → **these checks** → human merge
+          EOF
+      - run: npm install
+      - run: npm test
+
+  scanner-rerun-stub:
+    name: Scanner re-run (detective control)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Scanner re-run placeholder
+      - name: Why this check exists
         run: |
-          echo "Replace with Semgrep/OSV/CodeQL on the fix PR."
-          echo "Finding is only 'cleared' when this job's SARIF says so."
-          echo "See OpenFix: npx tsx src/cli.ts verify --pr <url>"
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          # Deterministic scanner re-run
+
+          The coding agent must **not** declare the vuln fixed.
+
+          In production this job is Semgrep / OSV / CodeQL / Snyk on the **fix PR**.
+          Fresh SARIF must show the finding cleared or reduced — that closes the loop.
+          EOF
+          echo "Stub OK — replace with real scanner; fail the job if the original rule still fires."
