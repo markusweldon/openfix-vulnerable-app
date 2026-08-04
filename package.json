@@ -1,0 +1,15 @@
+{
+  "name": "openfix-vulnerable-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Intentionally vulnerable demo app for OpenFix remediations",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "express": "4.17.1",
+    "lodash": "4.17.15"
+  }
+}
