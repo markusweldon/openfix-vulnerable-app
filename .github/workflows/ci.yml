@@ -1,11 +1,9 @@
 # CI on remediation / feature PRs — system of record before merge
 #
 # Interview beat: OpenFix opens the fix PR → these Checks run → human merges.
-# Agents do not self-attest. Jobs mirror an enterprise PR gate (unit + SAST +
-# SCA + secrets + CodeQL). Scanner jobs are stubs; replace with real tools.
-#
-# Jobs run SEQUENTIALLY (needs:) so free-tier GitHub-hosted concurrency is not
-# exhausted when several remediation PRs kick CI at once.
+# Agents do not self-attest. One job = one GitHub-hosted runner slot (free-tier
+# concurrency). Steps still mirror an enterprise PR gate (unit + SAST + SCA +
+# secrets + CodeQL). Scanner steps are stubs; replace with real tools.
 
 name: CI
 
@@ -20,103 +18,55 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  unit-tests:
-    name: Unit tests
+  ci:
+    name: PR gates
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+
       - name: Install
         run: npm install
-      - name: Run unit tests
+
+      - name: Unit tests
         run: npm test
+
+      - name: Semgrep SAST
+        run: |
+          echo "Simulated: semgrep ci --config=auto (detective control on remediation PR)"
+          echo "Production: fail if original rule/fingerprint still fires in fresh SARIF."
+
+      - name: OSV Dependency scan
+        run: |
+          echo "Simulated: osv-scanner -r . (SCA detective control)"
+          echo "Production: fail on newly introduced or unfixed CVEs vs baseline."
+
+      - name: Secret scanning
+        run: |
+          echo "Simulated: gitleaks detect --source . (no new secrets on fix PR)"
+
+      - name: CodeQL
+        run: |
+          echo "Simulated: github/codeql-action analyze (JS)"
+          echo "Production: upload SARIF; require clean vs baseline for merge."
+
       - name: Summary
         if: always()
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
-          ## Unit tests
+          ## PR gates (before merge)
 
-          Regression / smoke tests on the fix branch.
-          OpenFix agents propose patches; this job proves the app still works.
-          EOF
+          | Gate | Role |
+          | --- | --- |
+          | Unit tests | App still works after the fix |
+          | Semgrep SAST | Deterministic SAST on the fix PR |
+          | OSV Dependency scan | SCA after dependency bumps |
+          | Secret scanning | No accidental credentials |
+          | CodeQL | Second SAST control |
 
-  semgrep-sast:
-    name: Semgrep SAST
-    needs: unit-tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Simulate Semgrep on fix PR
-        run: |
-          echo "Simulated: semgrep ci --config=auto (detective control on remediation PR)"
-          echo "Production: fail if original rule/fingerprint still fires in fresh SARIF."
-          sleep 1
-      - name: Summary
-        run: |
-          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
-          ## Semgrep SAST
-
-          Deterministic SAST re-run on the **fix PR** (not agent prose).
-          Prototype stub — wire real Semgrep and gate on cleared findings.
-          EOF
-
-  dependency-sca:
-    name: OSV Dependency scan
-    needs: semgrep-sast
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Simulate OSV / SCA on lockfile
-        run: |
-          echo "Simulated: osv-scanner -r . (SCA detective control)"
-          echo "Production: fail on newly introduced or unfixed CVEs vs baseline."
-          sleep 1
-      - name: Summary
-        run: |
-          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
-          ## OSV Dependency scan
-
-          SCA re-check after dependency bumps from OpenFix agents.
-          Prototype stub — replace with osv-scanner / Snyk / Dependabot gates.
-          EOF
-
-  secret-scan:
-    name: Secret scanning
-    needs: dependency-sca
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Simulate gitleaks / secret scan
-        run: |
-          echo "Simulated: gitleaks detect --source . (no new secrets on fix PR)"
-          sleep 1
-      - name: Summary
-        run: |
-          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
-          ## Secret scanning
-
-          Block accidental credential commits on remediation branches.
-          OpenFix policy already keeps secret findings `human_only`.
-          EOF
-
-  codeql:
-    name: CodeQL
-    needs: secret-scan
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Simulate CodeQL analyze
-        run: |
-          echo "Simulated: github/codeql-action analyze (JS)"
-          echo "Production: upload SARIF; require clean vs baseline for merge."
-          sleep 1
-      - name: Summary
-        run: |
-          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
-          ## CodeQL
-
-          GitHub-native SAST as a second detective control beside Semgrep.
-          Prototype stub — enable CodeQL workflow for real queries.
+          OpenFix agents propose patches; this workflow is the system of record before merge.
+          Scanner steps are stubs in the interview prototype — swap in real tools for production.
           EOF
