@@ -1,12 +1,17 @@
-var { exec } = require("child_process");
+var { execFile } = require("child_process");
 
-/**
- * Intentionally vulnerable: shells out with unsanitized user input.
- */
+var HOST_PATTERN = /^[a-zA-Z0-9.-]+$/;
+
 function pingHost(host) {
-  // command injection: host is concatenated into a shell command
+  if (typeof host !== "string" || host.length === 0 || host.length > 253) {
+    return Promise.reject(new Error("Invalid host"));
+  }
+  if (!HOST_PATTERN.test(host)) {
+    return Promise.reject(new Error("Invalid host"));
+  }
+
   return new Promise(function (resolve, reject) {
-    exec("ping -c 1 " + host, function (err, stdout, stderr) {
+    execFile("ping", ["-c", "1", host], function (err, stdout, stderr) {
       if (err) return reject(err);
       resolve(stdout || stderr);
     });
