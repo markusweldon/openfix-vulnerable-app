@@ -4,13 +4,15 @@
 # Agents do not self-attest. Keep this LEAN (2 jobs) so free-tier runners finish
 # in ~30s. Enterprise gate names live in the scanner summary; swap stubs for
 # real Semgrep/OSV/CodeQL in production.
+#
+# Triggers: pull_request + push on EVERY branch (not just main). Push on the PR
+# head is what fills the PR Checks tab; workflow_dispatch alone does not.
 
 name: CI
 
 on:
   pull_request:
   push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
