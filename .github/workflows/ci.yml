@@ -1,9 +1,9 @@
-# CI on remediation / feature PRs — system of record before merge
+# App CI on remediation PRs — system of record before merge
 #
 # Interview beat: OpenFix opens the fix PR → these Checks run → human merges.
-# Agents do not self-attest. One job = one GitHub-hosted runner slot (free-tier
-# concurrency). Steps still mirror an enterprise PR gate (unit + SAST + SCA +
-# secrets + CodeQL). Scanner steps are stubs; replace with real tools.
+# Agents do not self-attest. Keep this LEAN (2 jobs) so free-tier runners finish
+# in ~30s. Enterprise gate names live in the scanner summary; swap stubs for
+# real Semgrep/OSV/CodeQL in production.
 
 name: CI
 
@@ -18,55 +18,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
-    name: PR gates
+  unit-tests:
+    name: Unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-
       - name: Install
         run: npm install
-
-      - name: Unit tests
+      - name: Run unit tests
         run: npm test
-
-      - name: Semgrep SAST
-        run: |
-          echo "Simulated: semgrep ci --config=auto (detective control on remediation PR)"
-          echo "Production: fail if original rule/fingerprint still fires in fresh SARIF."
-
-      - name: OSV Dependency scan
-        run: |
-          echo "Simulated: osv-scanner -r . (SCA detective control)"
-          echo "Production: fail on newly introduced or unfixed CVEs vs baseline."
-
-      - name: Secret scanning
-        run: |
-          echo "Simulated: gitleaks detect --source . (no new secrets on fix PR)"
-
-      - name: CodeQL
-        run: |
-          echo "Simulated: github/codeql-action analyze (JS)"
-          echo "Production: upload SARIF; require clean vs baseline for merge."
-
       - name: Summary
         if: always()
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
-          ## PR gates (before merge)
+          ## Unit tests
 
-          | Gate | Role |
-          | --- | --- |
-          | Unit tests | App still works after the fix |
-          | Semgrep SAST | Deterministic SAST on the fix PR |
-          | OSV Dependency scan | SCA after dependency bumps |
-          | Secret scanning | No accidental credentials |
-          | CodeQL | Second SAST control |
+          OpenFix agents propose patches. **This job proves the app still works.**
+          Flow: scanner finding → Cursor fix PR → **these checks** → human merge
+          EOF
 
-          OpenFix agents propose patches; this workflow is the system of record before merge.
-          Scanner steps are stubs in the interview prototype — swap in real tools for production.
+  scanner-rerun:
+    name: Scanner re-run (detective control)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Simulate scanner re-run on fix PR
+        run: |
+          echo "Simulated: Semgrep / OSV / secrets / CodeQL on the fix PR"
+          echo "Production: fail if the original finding still fires in fresh SARIF."
+      - name: Summary
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ## Scanner re-run (detective control)
+
+          Deterministic re-check on the **fix PR** (not agent prose).
+
+          In production this job is Semgrep + OSV/SCA + secret scan + CodeQL.
+          Fresh SARIF must show the finding cleared — that closes the loop.
+
+          Prototype stub — always green for the interview demo.
           EOF
