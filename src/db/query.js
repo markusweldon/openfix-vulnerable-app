@@ -1,9 +1,11 @@
 /**
- * Intentionally vulnerable: SQL built via string concatenation.
+ * Parameterized query — user input bound via placeholders, not concatenation.
  */
 function findUserByName(name) {
-  var sql = "SELECT * FROM users WHERE name = '" + name + "'";
-  return sql;
+  return {
+    sql: "SELECT * FROM users WHERE name = ?",
+    params: [name],
+  };
 }
 
 module.exports = { findUserByName };
