@@ -5,18 +5,20 @@
 # in ~30s. Enterprise gate names live in the scanner summary; swap stubs for
 # real Semgrep/OSV/CodeQL in production.
 #
-# Triggers: pull_request + push on EVERY branch (not just main). Push on the PR
-# head is what fills the PR Checks tab; workflow_dispatch alone does not.
+# Triggers: pull_request (fills PR Checks) + push on main only.
+# Do NOT push-trigger feature branches — empty-commit kicks would double
+# Checks (pull_request synchronize + push). workflow_dispatch is manual backup.
 
 name: CI
 
 on:
   pull_request:
   push:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
