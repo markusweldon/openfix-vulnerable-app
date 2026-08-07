@@ -1,13 +1,8 @@
 # App CI on remediation PRs — system of record before merge
 #
-# Interview beat: OpenFix opens the fix PR → these Checks run → human merges.
-# Agents do not self-attest. Keep this LEAN (2 jobs) so free-tier runners finish
-# in ~30s. Enterprise gate names live in the scanner summary; swap stubs for
-# real Semgrep/OSV/CodeQL in production.
-#
-# Triggers: pull_request (fills PR Checks) + push on main only.
-# Do NOT push-trigger feature branches — empty-commit kicks would double
-# Checks (pull_request synchronize + push). workflow_dispatch is manual backup.
+# Interview beat: OpenFix / Cursor opens the fix PR → these Checks run → human merges.
+# Agents do not self-attest. Lean 2 jobs (same shape as the working Aug 4 demo).
+# No empty-commit kicks from OpenFix — pull_request on the agent PR is enough.
 
 name: CI
 
@@ -15,11 +10,6 @@ on:
   pull_request:
   push:
     branches: [main]
-  workflow_dispatch:
-
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: true
 
 jobs:
   unit-tests:
