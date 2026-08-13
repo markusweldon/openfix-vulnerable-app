@@ -23,7 +23,7 @@ test("nextUrl rejects external and ambiguous redirect targets", function () {
 });
 
 test("/go only redirects to site-local paths", async function (t) {
-  var server = app.listen(0, "127.0.0.1");
+  var server = await listen();
   t.after(function () {
     return new Promise(function (resolve, reject) {
       server.close(function (err) {
@@ -50,6 +50,15 @@ test("/go only redirects to site-local paths", async function (t) {
   assert.equal(localResponse.statusCode, 302);
   assert.equal(localResponse.headers.location, "/dashboard?tab=profile");
 });
+
+function listen() {
+  return new Promise(function (resolve, reject) {
+    var server = app.listen(0, "127.0.0.1", function () {
+      resolve(server);
+    });
+    server.on("error", reject);
+  });
+}
 
 function request(server, path) {
   return new Promise(function (resolve, reject) {
