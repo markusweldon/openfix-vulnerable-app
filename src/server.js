@@ -84,7 +84,8 @@ app.get("/encrypt", function (req, res) {
 });
 
 app.get("/user", function (req, res) {
-  res.type("text/plain").send(findUserByName(req.query.name || "ada"));
+  var query = findUserByName(req.query.name || "ada");
+  res.type("application/json").send(JSON.stringify(query));
 });
 
 app.get("/comment", function (req, res) {
