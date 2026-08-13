@@ -6,3 +6,9 @@ test("readUserFile reads a safe relative file", function () {
   var contents = files.readUserFile("readme.txt");
   assert.match(contents, /hello from safe file/);
 });
+
+test("readUserFile rejects path traversal", function () {
+  assert.throws(function () {
+    files.readUserFile("../package.json");
+  }, /Invalid path/);
+});

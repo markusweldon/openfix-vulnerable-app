@@ -1,13 +1,12 @@
 var fs = require("fs");
 var path = require("path");
 
-/**
- * Intentionally vulnerable: joins user input onto a base directory
- * without rejecting path traversal sequences.
- */
 function readUserFile(userPath) {
-  var base = path.join(__dirname, "..", "data");
-  var target = path.join(base, userPath);
+  var base = path.resolve(path.join(__dirname, "..", "data"));
+  var target = path.resolve(base, userPath);
+  if (target !== base && !target.startsWith(base + path.sep)) {
+    throw new Error("Invalid path");
+  }
   return fs.readFileSync(target, "utf8");
 }
 
