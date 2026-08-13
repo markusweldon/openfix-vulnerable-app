@@ -1,11 +1,34 @@
 var http = require("http");
+var https = require("https");
 
-/**
- * Intentionally vulnerable: server-side request forgery — fetches attacker URL.
- */
+var ALLOWED_HOSTS = ["127.0.0.1", "localhost"];
+
+function isAllowedUrl(urlString) {
+  var parsed;
+  try {
+    parsed = new URL(urlString);
+  } catch (err) {
+    return false;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return false;
+  }
+  if (parsed.username || parsed.password) {
+    return false;
+  }
+  return ALLOWED_HOSTS.indexOf(parsed.hostname) !== -1;
+}
+
 function fetchUrl(url) {
+  if (!isAllowedUrl(url)) {
+    return Promise.reject(new Error("URL not allowed"));
+  }
+
+  var parsed = new URL(url);
+  var client = parsed.protocol === "https:" ? https : http;
+
   return new Promise(function (resolve, reject) {
-    http
+    client
       .get(url, function (res) {
         var data = "";
         res.on("data", function (chunk) {
@@ -19,4 +42,4 @@ function fetchUrl(url) {
   });
 }
 
-module.exports = { fetchUrl };
+module.exports = { fetchUrl, isAllowedUrl };
